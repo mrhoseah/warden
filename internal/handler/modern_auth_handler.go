@@ -26,7 +26,16 @@ type RequestMagicLinkRequest struct {
 	Email string `json:"email"`
 }
 
-// RequestMagicLink handles magic link request
+// RequestMagicLink godoc
+// @Summary      Request magic link
+// @Description  Sends a passwordless login link to the user's email
+// @Tags         magic-link
+// @Accept       json
+// @Produce      json
+// @Param        request  body      RequestMagicLinkRequest  true  "Magic link request"
+// @Success      200      {object}  map[string]string
+// @Failure      400      {object}  handler.ErrorResponse
+// @Router       /auth/magic-link/request [post]
 func (h *ModernAuthHandler) RequestMagicLink(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -60,7 +69,17 @@ type LoginWithMagicLinkRequest struct {
 	Token string `json:"token"`
 }
 
-// LoginWithMagicLink handles magic link authentication
+// LoginWithMagicLink godoc
+// @Summary      Login with magic link
+// @Description  Authenticates using a magic link token from email
+// @Tags         magic-link
+// @Accept       json
+// @Produce      json
+// @Param        request  body      LoginWithMagicLinkRequest  true  "Magic link login request"
+// @Success      200      {object}  map[string]interface{}
+// @Failure      400      {object}  handler.ErrorResponse
+// @Failure      401      {object}  handler.ErrorResponse
+// @Router       /auth/magic-link [post]
 func (h *ModernAuthHandler) LoginWithMagicLink(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -94,7 +113,16 @@ func (h *ModernAuthHandler) LoginWithMagicLink(w http.ResponseWriter, r *http.Re
 	})
 }
 
-// GetSessions handles getting user sessions
+// GetSessions godoc
+// @Summary      Get active sessions
+// @Description  Returns all active sessions for the authenticated user
+// @Tags         sessions
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  map[string]interface{}
+// @Failure      401  {object}  handler.ErrorResponse
+// @Router       /sessions [get]
 func (h *ModernAuthHandler) GetSessions(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -231,7 +259,17 @@ func (h *ModernAuthHandler) MarkDeviceAsTrusted(w http.ResponseWriter, r *http.R
 	})
 }
 
-// GetLoginHistory handles getting login history
+// GetLoginHistory godoc
+// @Summary      Get login history
+// @Description  Returns login history for the authenticated user
+// @Tags         account
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        limit   query     int  false  "Number of records to return (default: 50)"
+// @Success      200     {object}  map[string]interface{}
+// @Failure      401     {object}  handler.ErrorResponse
+// @Router       /login-history [get]
 func (h *ModernAuthHandler) GetLoginHistory(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -269,7 +307,18 @@ type UpdateProfileRequest struct {
 	Name string `json:"name"`
 }
 
-// UpdateProfile handles profile updates
+// UpdateProfile godoc
+// @Summary      Update profile
+// @Description  Updates the user's profile information
+// @Tags         account
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        request  body      UpdateProfileRequest  true  "Profile update request"
+// @Success      200      {object}  map[string]string
+// @Failure      400      {object}  handler.ErrorResponse
+// @Failure      401      {object}  handler.ErrorResponse
+// @Router       /profile [put]
 func (h *ModernAuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -311,7 +360,18 @@ type ChangePasswordRequest struct {
 	NewPassword     string `json:"new_password"`
 }
 
-// ChangePassword handles password changes
+// ChangePassword godoc
+// @Summary      Change password
+// @Description  Changes the user's password (requires current password)
+// @Tags         account
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        request  body      ChangePasswordRequest  true  "Password change request"
+// @Success      200      {object}  map[string]string
+// @Failure      400      {object}  handler.ErrorResponse
+// @Failure      401      {object}  handler.ErrorResponse
+// @Router       /password/change [post]
 func (h *ModernAuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -484,7 +544,18 @@ type GenerateAPIKeyRequest struct {
 	ExpiresInDays *int  `json:"expires_in_days,omitempty"`
 }
 
-// GenerateAPIKey handles API key generation
+// GenerateAPIKey godoc
+// @Summary      Generate API key
+// @Description  Generates a new API key for service-to-service authentication
+// @Tags         api-keys
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        request  body      GenerateAPIKeyRequest  true  "API key generation request"
+// @Success      200      {object}  map[string]interface{}
+// @Failure      400      {object}  handler.ErrorResponse
+// @Failure      401      {object}  handler.ErrorResponse
+// @Router       /api-keys/generate [post]
 func (h *ModernAuthHandler) GenerateAPIKey(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -533,7 +604,16 @@ func (h *ModernAuthHandler) GenerateAPIKey(w http.ResponseWriter, r *http.Reques
 	})
 }
 
-// GetAPIKeys handles getting user API keys
+// GetAPIKeys godoc
+// @Summary      Get API keys
+// @Description  Returns all API keys for the authenticated user
+// @Tags         api-keys
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  map[string]interface{}
+// @Failure      401  {object}  handler.ErrorResponse
+// @Router       /api-keys [get]
 func (h *ModernAuthHandler) GetAPIKeys(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

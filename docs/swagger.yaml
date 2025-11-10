@@ -1,0 +1,644 @@
+basePath: /
+definitions:
+  handler.ChangePasswordRequest:
+    properties:
+      current_password:
+        type: string
+      new_password:
+        type: string
+    type: object
+  handler.EnableTwoFactorRequest:
+    properties:
+      code:
+        description: Optional, for verification step
+        type: string
+    type: object
+  handler.ErrorResponse:
+    properties:
+      error:
+        type: string
+      message:
+        type: string
+    type: object
+  handler.GenerateAPIKeyRequest:
+    properties:
+      expires_in_days:
+        type: integer
+      name:
+        type: string
+    type: object
+  handler.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  handler.LoginWithMagicLinkRequest:
+    properties:
+      token:
+        type: string
+    type: object
+  handler.LoginWithTwoFactorRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+      two_factor_code:
+        type: string
+    type: object
+  handler.PasswordResetConfirmRequest:
+    properties:
+      new_password:
+        type: string
+      token:
+        type: string
+    type: object
+  handler.PasswordResetRequest:
+    properties:
+      email:
+        type: string
+    type: object
+  handler.RefreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    type: object
+  handler.RegisterRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  handler.RequestMagicLinkRequest:
+    properties:
+      email:
+        type: string
+    type: object
+  handler.UpdateProfileRequest:
+    properties:
+      name:
+        type: string
+    type: object
+  handler.VerifyEmailRequest:
+    properties:
+      token:
+        type: string
+    type: object
+  service.LoginResponse:
+    properties:
+      requires_two_factor:
+        type: boolean
+      token_pair:
+        $ref: '#/definitions/service.TokenPair'
+    type: object
+  service.TokenPair:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@example.com
+    name: API Support
+    url: http://www.example.com/support
+  description: A production-ready authentication microservice with modern features
+    including 2FA, magic links, session management, and API keys.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Authentication Service API
+  version: "1.0"
+paths:
+  /2fa/disable:
+    post:
+      consumes:
+      - application/json
+      description: Disables 2FA for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Disable two-factor authentication
+      tags:
+      - two-factor
+  /2fa/enable:
+    post:
+      consumes:
+      - application/json
+      description: Generates a QR code for 2FA setup. Send code in body to verify
+        and activate.
+      parameters:
+      - description: 2FA enable request (optional code for verification)
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/handler.EnableTwoFactorRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Enable two-factor authentication
+      tags:
+      - two-factor
+  /api-keys:
+    get:
+      consumes:
+      - application/json
+      description: Returns all API keys for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get API keys
+      tags:
+      - api-keys
+  /api-keys/generate:
+    post:
+      consumes:
+      - application/json
+      description: Generates a new API key for service-to-service authentication
+      parameters:
+      - description: API key generation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.GenerateAPIKeyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Generate API key
+      tags:
+      - api-keys
+  /auth/magic-link:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates using a magic link token from email
+      parameters:
+      - description: Magic link login request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.LoginWithMagicLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Login with magic link
+      tags:
+      - magic-link
+  /auth/magic-link/request:
+    post:
+      consumes:
+      - application/json
+      description: Sends a passwordless login link to the user's email
+      parameters:
+      - description: Magic link request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.RequestMagicLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Request magic link
+      tags:
+      - magic-link
+  /email/verify:
+    post:
+      consumes:
+      - application/json
+      description: Verifies a user's email address using a token from the verification
+        email
+      parameters:
+      - description: Email verification request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.VerifyEmailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Verify email address
+      tags:
+      - email
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user and returns tokens. If 2FA is enabled, returns
+        requires_two_factor flag.
+      parameters:
+      - description: Login request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Login with email and password
+      tags:
+      - authentication
+  /login-history:
+    get:
+      consumes:
+      - application/json
+      description: Returns login history for the authenticated user
+      parameters:
+      - description: 'Number of records to return (default: 50)'
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get login history
+      tags:
+      - account
+  /login/2fa:
+    post:
+      consumes:
+      - application/json
+      description: Completes login when 2FA is enabled by providing the TOTP code
+      parameters:
+      - description: Login with 2FA request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.LoginWithTwoFactorRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.TokenPair'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Login with 2FA code
+      tags:
+      - authentication
+  /password/change:
+    post:
+      consumes:
+      - application/json
+      description: Changes the user's password (requires current password)
+      parameters:
+      - description: Password change request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Change password
+      tags:
+      - account
+  /password/reset:
+    post:
+      consumes:
+      - application/json
+      description: Sends a password reset email to the user
+      parameters:
+      - description: Password reset request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.PasswordResetRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Request password reset
+      tags:
+      - password
+  /password/reset/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Resets the password using a token from the reset email
+      parameters:
+      - description: Password reset confirmation
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.PasswordResetConfirmRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Confirm password reset
+      tags:
+      - password
+  /profile:
+    put:
+      consumes:
+      - application/json
+      description: Updates the user's profile information
+      parameters:
+      - description: Profile update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update profile
+      tags:
+      - account
+  /refresh:
+    post:
+      consumes:
+      - application/json
+      description: Exchanges a refresh token for a new access/refresh token pair
+      parameters:
+      - description: Refresh token request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.TokenPair'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Refresh access token
+      tags:
+      - authentication
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user account and returns access/refresh tokens
+      parameters:
+      - description: Registration request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/service.TokenPair'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - authentication
+  /sessions:
+    get:
+      consumes:
+      - application/json
+      description: Returns all active sessions for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get active sessions
+      tags:
+      - sessions
+  /user:
+    get:
+      consumes:
+      - application/json
+      description: Returns information about the currently authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get authenticated user
+      tags:
+      - user
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

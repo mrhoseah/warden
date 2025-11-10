@@ -9,7 +9,30 @@ import (
 	"authservice/internal/middleware"
 	"authservice/internal/models"
 	"authservice/internal/service"
+
+	_ "authservice/docs" // swagger docs
+	httpSwagger "github.com/swaggo/http-swagger"
 )
+
+// @title           Authentication Service API
+// @version         1.0
+// @description     A production-ready authentication microservice with modern features including 2FA, magic links, session management, and API keys.
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   API Support
+// @contact.url    http://www.example.com/support
+// @contact.email  support@example.com
+
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host      localhost:8080
+// @BasePath  /
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
 
 func main() {
 	// Initialize components following clean architecture
@@ -64,6 +87,9 @@ func main() {
 	mux.HandleFunc("/api-keys/generate", authMiddleware.RequireAuth(modernAuthHandler.GenerateAPIKey))
 	mux.HandleFunc("/api-keys/revoke", authMiddleware.RequireAuth(modernAuthHandler.RevokeAPIKey))
 
+	// Swagger documentation
+	mux.HandleFunc("/swagger/", httpSwagger.WrapHandler)
+
 	// Start server
 	port := ":8080"
 	fmt.Printf("🚀 Authentication Service starting on http://localhost%s\n", port)
@@ -97,6 +123,8 @@ func main() {
 	fmt.Println("   GET    /api-keys                - Get API keys")
 	fmt.Println("   POST   /api-keys/generate       - Generate API key")
 	fmt.Println("   POST   /api-keys/revoke         - Revoke API key")
+	fmt.Println("\n📚 API Documentation:")
+	fmt.Println("   GET    /swagger/index.html      - Swagger UI documentation")
 
 	if err := http.ListenAndServe(port, mux); err != nil {
 		log.Fatal("Server failed to start:", err)
