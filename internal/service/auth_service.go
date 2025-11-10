@@ -73,7 +73,7 @@ func (s *AuthService) Register(email, password string) (*TokenPair, error) {
 	}
 
 	// Generate token pair
-	return s.generateTokenPair(user)
+	return s.GenerateTokenPair(user)
 }
 
 // LoginResponse represents the response from login (may require 2FA)
@@ -104,7 +104,7 @@ func (s *AuthService) Login(email, password string) (*LoginResponse, error) {
 	}
 
 	// Generate token pair
-	tokenPair, err := s.generateTokenPair(user)
+	tokenPair, err := s.GenerateTokenPair(user)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func (s *AuthService) LoginWithTwoFactor(email, password, twoFactorCode string) 
 	}
 
 	// Generate token pair
-	return s.generateTokenPair(user)
+	return s.GenerateTokenPair(user)
 }
 
 // RefreshToken exchanges a refresh token for a new token pair
@@ -167,7 +167,7 @@ func (s *AuthService) RefreshToken(refreshTokenString string) (*TokenPair, error
 	}
 
 	// Generate new token pair
-	return s.generateTokenPair(user)
+	return s.GenerateTokenPair(user)
 }
 
 // ValidateAccessToken validates an access token and returns the user ID
@@ -189,8 +189,8 @@ func (s *AuthService) ValidateAccessToken(accessTokenString string) (int, error)
 	return claims.UserID, nil
 }
 
-// generateTokenPair creates both access and refresh tokens for a user
-func (s *AuthService) generateTokenPair(user *models.User) (*TokenPair, error) {
+// GenerateTokenPair creates both access and refresh tokens for a user
+func (s *AuthService) GenerateTokenPair(user *models.User) (*TokenPair, error) {
 	now := time.Now()
 	accessExpiresAt := now.Add(15 * time.Minute)  // 15 minutes
 	refreshExpiresAt := now.Add(7 * 24 * time.Hour) // 7 days
@@ -436,7 +436,7 @@ func (s *AuthService) AuthenticateWithOAuth(oauthInfo OAuthUserInfo) (*TokenPair
 	}
 
 	// Generate token pair
-	return s.generateTokenPair(user)
+	return s.GenerateTokenPair(user)
 }
 
 // EnableTwoFactor generates a TOTP secret and QR code for 2FA setup
