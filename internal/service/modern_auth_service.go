@@ -207,6 +207,15 @@ func (s *ModernAuthService) ChangePassword(userID int, currentPassword, newPassw
 		return errors.New("current password is incorrect")
 	}
 
+	// Validate password strength (if security service is available)
+	securityService := s.authService.GetSecurityService()
+	if securityService != nil {
+		strength := securityService.ValidatePasswordStrength(newPassword)
+		if !strength.Valid {
+			return errors.New("password does not meet strength requirements: " + strings.Join(strength.Issues, ", "))
+		}
+	}
+
 	// Hash new password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {

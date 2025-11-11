@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"os"
+	"strings"
 	"time"
 
 	"authservice/internal/models"
@@ -17,9 +18,10 @@ import (
 
 // AuthService handles core authentication business logic
 type AuthService struct {
-	userStore    *models.UserStore
-	jwtSecret    []byte
-	emailService EmailService
+	userStore       *models.UserStore
+	jwtSecret       []byte
+	emailService    EmailService
+	securityService *SecurityService
 }
 
 // TokenPair represents an access and refresh token pair
@@ -39,21 +41,30 @@ type Claims struct {
 }
 
 // NewAuthService creates a new authentication service
-func NewAuthService(userStore *models.UserStore, emailService EmailService) *AuthService {
+func NewAuthService(userStore *models.UserStore, emailService EmailService, securityService *SecurityService) *AuthService {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		secret = "your-secret-key-change-in-production" // Default for development
 	}
 
 	return &AuthService{
-		userStore:    userStore,
-		jwtSecret:    []byte(secret),
-		emailService: emailService,
+		userStore:       userStore,
+		jwtSecret:       []byte(secret),
+		emailService:    emailService,
+		securityService: securityService,
 	}
 }
 
 // Register creates a new user and returns a token pair
 func (s *AuthService) Register(email, password string) (*TokenPair, error) {
+	// Validate password strength
+	if s.securityService != nil {
+		strength := s.securityService.ValidatePasswordStrength(password)
+		if !strength.Valid {
+			return nil, errors.New("password does not meet strength requirements: " + strings.Join(strength.Issues, ", "))
+		}
+	}
+
 	// Hash the password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -84,16 +95,36 @@ type LoginResponse struct {
 
 // Login authenticates a user and returns a token pair or indicates 2FA is required
 func (s *AuthService) Login(email, password string) (*LoginResponse, error) {
+	// Check account lockout
+	if s.securityService != nil {
+		if err := s.securityService.CheckAccountLockout(email); err != nil {
+			return nil, err
+		}
+	}
+
 	// Get user by email
 	user, err := s.userStore.GetUserByEmail(email)
 	if err != nil {
+		// Record failed attempt
+		if s.securityService != nil {
+			s.securityService.RecordFailedLogin(email)
+		}
 		return nil, errors.New("invalid credentials")
 	}
 
 	// Verify password
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	if err != nil {
+		// Record failed attempt
+		if s.securityService != nil {
+			s.securityService.RecordFailedLogin(email)
+		}
 		return nil, errors.New("invalid credentials")
+	}
+
+	// Clear failed attempts on successful login
+	if s.securityService != nil {
+		s.securityService.ClearFailedAttempts(email)
 	}
 
 	// If 2FA is enabled, return indication that 2FA code is required
@@ -172,6 +203,11 @@ func (s *AuthService) RefreshToken(refreshTokenString string) (*TokenPair, error
 
 // ValidateAccessToken validates an access token and returns the user ID
 func (s *AuthService) ValidateAccessToken(accessTokenString string) (int, error) {
+	// Check if token is blacklisted
+	if s.securityService != nil && s.securityService.IsTokenBlacklisted(accessTokenString) {
+		return 0, errors.New("token has been revoked")
+	}
+
 	// Parse and validate access token
 	token, err := jwt.ParseWithClaims(accessTokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		return s.jwtSecret, nil
@@ -187,6 +223,43 @@ func (s *AuthService) ValidateAccessToken(accessTokenString string) (int, error)
 	}
 
 	return claims.UserID, nil
+}
+
+// RevokeToken revokes/blacklists a token
+func (s *AuthService) RevokeToken(tokenString string) error {
+	if s.securityService == nil {
+		return errors.New("security service not available")
+	}
+
+	// Parse token to get expiration
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		return s.jwtSecret, nil
+	})
+
+	if err != nil {
+		// Even if parsing fails, we can still blacklist the token string
+		// Use a default expiration of 7 days
+		expiresAt := time.Now().Add(7 * 24 * time.Hour)
+		s.securityService.BlacklistToken(tokenString, expiresAt)
+		return nil
+	}
+
+	claims, ok := token.Claims.(*Claims)
+	if ok && claims.ExpiresAt != nil {
+		expiresAt := claims.ExpiresAt.Time
+		s.securityService.BlacklistToken(tokenString, expiresAt)
+	} else {
+		// Default expiration
+		expiresAt := time.Now().Add(7 * 24 * time.Hour)
+		s.securityService.BlacklistToken(tokenString, expiresAt)
+	}
+
+	return nil
+}
+
+// GetSecurityService returns the security service (if available)
+func (s *AuthService) GetSecurityService() *SecurityService {
+	return s.securityService
 }
 
 // GenerateTokenPair creates both access and refresh tokens for a user
@@ -268,6 +341,14 @@ func (s *AuthService) RequestPasswordReset(email string) error {
 
 // ResetPassword resets a user's password using a reset token
 func (s *AuthService) ResetPassword(token, newPassword string) error {
+	// Validate password strength
+	if s.securityService != nil {
+		strength := s.securityService.ValidatePasswordStrength(newPassword)
+		if !strength.Valid {
+			return errors.New("password does not meet strength requirements: " + strings.Join(strength.Issues, ", "))
+		}
+	}
+
 	// Find user by reset token
 	user, err := s.findUserByResetToken(token)
 	if err != nil {

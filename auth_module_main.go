@@ -40,13 +40,16 @@ func main() {
 	sessionStore := models.NewSessionStore()
 	loginHistoryStore := models.NewLoginHistoryStore()
 	apiKeyStore := models.NewAPIKeyStore()
+	securityStore := models.NewSecurityStore()
 	
 	emailService := service.NewMockEmailService()
-	authService := service.NewAuthService(userStore, emailService)
+	securityService := service.NewSecurityService(securityStore, loginHistoryStore)
+	authService := service.NewAuthService(userStore, emailService, securityService)
 	modernAuthService := service.NewModernAuthService(authService, sessionStore, loginHistoryStore, apiKeyStore, userStore)
 	
 	authHandler := handler.NewHandler(authService)
 	modernAuthHandler := handler.NewModernAuthHandler(modernAuthService)
+	securityHandler := handler.NewSecurityHandler(authService, securityService)
 	authMiddleware := middleware.NewAuthMiddleware(authService)
 
 	// Setup routes
@@ -86,6 +89,13 @@ func main() {
 	mux.HandleFunc("/api-keys", authMiddleware.RequireAuth(modernAuthHandler.GetAPIKeys))
 	mux.HandleFunc("/api-keys/generate", authMiddleware.RequireAuth(modernAuthHandler.GenerateAPIKey))
 	mux.HandleFunc("/api-keys/revoke", authMiddleware.RequireAuth(modernAuthHandler.RevokeAPIKey))
+	
+	// Security endpoints
+	mux.HandleFunc("/security/password/validate", securityHandler.ValidatePassword)
+	mux.HandleFunc("/security/token/revoke", authMiddleware.RequireAuth(securityHandler.RevokeToken))
+	mux.HandleFunc("/security/token/revoke-current", authMiddleware.RequireAuth(securityHandler.RevokeCurrentToken))
+	mux.HandleFunc("/security/status", authMiddleware.RequireAuth(securityHandler.GetSecurityStatus))
+	mux.HandleFunc("/security/suspicious-activity", authMiddleware.RequireAuth(securityHandler.CheckSuspiciousActivity))
 
 	// Swagger documentation
 	mux.HandleFunc("/swagger/", httpSwagger.WrapHandler)
@@ -123,6 +133,12 @@ func main() {
 	fmt.Println("   GET    /api-keys                - Get API keys")
 	fmt.Println("   POST   /api-keys/generate       - Generate API key")
 	fmt.Println("   POST   /api-keys/revoke         - Revoke API key")
+	fmt.Println("\n🔐 Security Features:")
+	fmt.Println("   POST   /security/password/validate      - Validate password strength")
+	fmt.Println("   POST   /security/token/revoke           - Revoke a specific token")
+	fmt.Println("   POST   /security/token/revoke-current   - Revoke current access token")
+	fmt.Println("   GET    /security/status                 - Get security status")
+	fmt.Println("   POST   /security/suspicious-activity    - Check for suspicious activity")
 	fmt.Println("\n📚 API Documentation:")
 	fmt.Println("   GET    /swagger/index.html      - Swagger UI documentation")
 

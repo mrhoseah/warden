@@ -3,19 +3,23 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"authservice/internal/service"
 )
 
 // Handler handles HTTP requests for authentication
 type Handler struct {
-	authService *service.AuthService
+	authService     *service.AuthService
+	securityService *service.SecurityService
 }
 
 // NewHandler creates a new HTTP handler
 func NewHandler(authService *service.AuthService) *Handler {
+	securityService := authService.GetSecurityService()
 	return &Handler{
-		authService: authService,
+		authService:     authService,
+		securityService: securityService,
 	}
 }
 
@@ -112,6 +116,21 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	if req.Email == "" || req.Password == "" {
 		respondWithError(w, http.StatusBadRequest, "Email and password are required", "")
 		return
+	}
+
+	// Rate limiting by IP and email
+	if h.securityService != nil {
+		ipAddress := getClientIP(r)
+		// Rate limit by IP: 10 attempts per 15 minutes
+		if err := h.securityService.CheckRateLimit(ipAddress, 10, 15*time.Minute); err != nil {
+			respondWithError(w, http.StatusTooManyRequests, "Too many login attempts", err.Error())
+			return
+		}
+		// Rate limit by email: 5 attempts per 15 minutes
+		if err := h.securityService.CheckRateLimit(req.Email, 5, 15*time.Minute); err != nil {
+			respondWithError(w, http.StatusTooManyRequests, "Too many login attempts", err.Error())
+			return
+		}
 	}
 
 	// Authenticate user
