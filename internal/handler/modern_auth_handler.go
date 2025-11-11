@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"authservice/internal/service"
@@ -695,12 +694,5 @@ func extractDeviceInfo(r *http.Request) service.DeviceInfo {
 		IPAddress:  ipAddress,
 		UserAgent:  userAgent,
 	}
-}
-
-
-func parseInt(s string) (int, error) {
-	var result int
-	_, err := fmt.Sscanf(s, "%d", &result)
-	return result, err
 }
 

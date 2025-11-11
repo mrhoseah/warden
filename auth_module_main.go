@@ -41,15 +41,18 @@ func main() {
 	loginHistoryStore := models.NewLoginHistoryStore()
 	apiKeyStore := models.NewAPIKeyStore()
 	securityStore := models.NewSecurityStore()
+	auditStore := models.NewAuditStore()
 	
 	emailService := service.NewMockEmailService()
 	securityService := service.NewSecurityService(securityStore, loginHistoryStore)
 	authService := service.NewAuthService(userStore, emailService, securityService)
 	modernAuthService := service.NewModernAuthService(authService, sessionStore, loginHistoryStore, apiKeyStore, userStore)
+	advancedSecurityService := service.NewAdvancedSecurityService(securityStore, auditStore, sessionStore, loginHistoryStore, securityService)
 	
 	authHandler := handler.NewHandler(authService)
 	modernAuthHandler := handler.NewModernAuthHandler(modernAuthService)
 	securityHandler := handler.NewSecurityHandler(authService, securityService)
+	advancedSecurityHandler := handler.NewAdvancedSecurityHandler(advancedSecurityService)
 	authMiddleware := middleware.NewAuthMiddleware(authService)
 
 	// Setup routes
@@ -96,6 +99,14 @@ func main() {
 	mux.HandleFunc("/security/token/revoke-current", authMiddleware.RequireAuth(securityHandler.RevokeCurrentToken))
 	mux.HandleFunc("/security/status", authMiddleware.RequireAuth(securityHandler.GetSecurityStatus))
 	mux.HandleFunc("/security/suspicious-activity", authMiddleware.RequireAuth(securityHandler.CheckSuspiciousActivity))
+	
+	// Advanced security endpoints
+	mux.HandleFunc("/security/advanced/password/breach-check", advancedSecurityHandler.CheckPasswordBreach)
+	mux.HandleFunc("/security/advanced/password/validate-with-breach", advancedSecurityHandler.ValidatePasswordWithBreach)
+	mux.HandleFunc("/security/advanced/adaptive-auth", authMiddleware.RequireAuth(advancedSecurityHandler.EvaluateAdaptiveAuth))
+	mux.HandleFunc("/security/advanced/session-hijacking", authMiddleware.RequireAuth(advancedSecurityHandler.DetectSessionHijacking))
+	mux.HandleFunc("/security/advanced/audit-log", authMiddleware.RequireAuth(advancedSecurityHandler.GetAuditLog))
+	mux.HandleFunc("/security/advanced/ip-location", advancedSecurityHandler.GetIPLocation)
 
 	// Swagger documentation
 	mux.HandleFunc("/swagger/", httpSwagger.WrapHandler)
@@ -139,6 +150,13 @@ func main() {
 	fmt.Println("   POST   /security/token/revoke-current   - Revoke current access token")
 	fmt.Println("   GET    /security/status                 - Get security status")
 	fmt.Println("   POST   /security/suspicious-activity    - Check for suspicious activity")
+	fmt.Println("\n🚀 Advanced Security Features:")
+	fmt.Println("   POST   /security/advanced/password/breach-check        - Check if password was in data breach")
+	fmt.Println("   POST   /security/advanced/password/validate-with-breach - Validate password + breach check")
+	fmt.Println("   POST   /security/advanced/adaptive-auth                - Evaluate risk-based authentication")
+	fmt.Println("   POST   /security/advanced/session-hijacking            - Detect session hijacking")
+	fmt.Println("   GET    /security/advanced/audit-log                    - Get comprehensive audit log")
+	fmt.Println("   POST   /security/advanced/ip-location                  - Get IP geolocation info")
 	fmt.Println("\n📚 API Documentation:")
 	fmt.Println("   GET    /swagger/index.html      - Swagger UI documentation")
 

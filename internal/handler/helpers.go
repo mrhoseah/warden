@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 )
@@ -41,5 +42,12 @@ func detectDeviceType(userAgent string) string {
 		return "desktop"
 	}
 	return "unknown"
+}
+
+// parseInt parses a string to int
+func parseInt(s string) (int, error) {
+	var result int
+	_, err := fmt.Sscanf(s, "%d", &result)
+	return result, err
 }
 
